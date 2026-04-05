@@ -63,14 +63,23 @@ class OoOCoreWrapper:
         env = os.environ.copy()
         env["SIM_CYCLES"] = str(cycles)
         
-        # Execute the Makefile we built using WSL since Icarus Verilog is there
+        # Execute the Makefile
         print(f"[Wrapper] Starting simulation for {cycles} cycles...")
+        
+        if sys.platform == "win32":
+            # Running on Windows, use WSL bridge
+            cmd = ["wsl", "bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; SIM_CYCLES={cycles} make"]
+        else:
+            # Running directly in Linux/Ubuntu
+            cmd = ["make"]
+
         process = subprocess.run(
-            ["wsl", "bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; SIM_CYCLES={cycles} make"],
+            cmd,
             cwd=self.workspace_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
+            env=env
         )
         
         if process.returncode != 0:
