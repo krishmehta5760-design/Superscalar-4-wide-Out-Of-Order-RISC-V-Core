@@ -1,0 +1,16 @@
+# Simulation Build Files
+sim_build/
+results.xml
+results.json
+program.mem
+dump.vcd
+*.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Dashboard Outputs
+expo_dashboard.html
