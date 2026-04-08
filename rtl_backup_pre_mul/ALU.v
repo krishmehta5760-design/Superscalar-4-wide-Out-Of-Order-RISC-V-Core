@@ -40,10 +40,10 @@ case({func7,func3})
 10'b0100000_101: result = $signed(src1) >>> src2[4:0];
 10'b0000000_110: result = src1 | src2;
 10'b0000000_111: result = src1 & src2;
-// 10'b0000001_000: result = src1 * src2; // Handled by MUL_Unit
-// 10'b0000001_001: result = ($signed({{32{src1[31]}},src1}) * $signed({{32{src2[31]}},src2})) >> 32; // Handled by MUL_Unit
-// 10'b0000001_010: result = ($signed({{32{src1[31]}},src1}) * {{32'd0},src2}) >> 32; // Handled by MUL_Unit
-// 10'b0000001_011: result = ({32'd0,src1} * {32'd0,src2}) >> 32; // Handled by MUL_Unit
+10'b0000001_000: result = src1 * src2;
+10'b0000001_001: result = ($signed({{32{src1[31]}},src1}) * $signed({{32{src2[31]}},src2})) >> 32;
+10'b0000001_010: result = ($signed({{32{src1[31]}},src1}) * {{32'd0},src2}) >> 32;
+10'b0000001_011: result = ({32'd0,src1} * {32'd0,src2}) >> 32;
 10'b0000001_100: result = (src2 == 0) ? 32'hffffffff : $signed(src1) / $signed(src2);
 10'b0000001_101: result = (src2 == 0) ? 32'hffffffff : src1 / src2;
 10'b0000001_110: result = (src2 == 0) ? src1 : $signed(src1) % $signed(src2);

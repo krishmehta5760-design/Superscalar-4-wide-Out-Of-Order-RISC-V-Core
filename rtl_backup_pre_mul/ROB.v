@@ -35,8 +35,7 @@ module ROB(
     output reg squashing,
     output reg rat_restore_valid,
     output reg [4:0] rat_restore_rd,
-    output reg [6:0] rat_restore_prd,
-    output reg [6:0] rat_restore_new_prd
+    output reg [6:0] rat_restore_prd
 
 );
 
@@ -56,26 +55,17 @@ reg rob_valid [0:ROB_DEPTH-1];
 
 reg [4:0] rob_head;   
 reg [4:0] rob_tail;   
-wire [5:0] rob_count;  
+reg [5:0] rob_count;  
 
 integer i;
 
 reg [2:0] num_incoming;
 reg [5:0] free_slots;
 
-assign rob_count = (rob_valid[0] + rob_valid[1] + rob_valid[2] + rob_valid[3] +
-                    rob_valid[4] + rob_valid[5] + rob_valid[6] + rob_valid[7] +
-                    rob_valid[8] + rob_valid[9] + rob_valid[10] + rob_valid[11] +
-                    rob_valid[12] + rob_valid[13] + rob_valid[14] + rob_valid[15] +
-                    rob_valid[16] + rob_valid[17] + rob_valid[18] + rob_valid[19] +
-                    rob_valid[20] + rob_valid[21] + rob_valid[22] + rob_valid[23] +
-                    rob_valid[24] + rob_valid[25] + rob_valid[26] + rob_valid[27] +
-                    rob_valid[28] + rob_valid[29] + rob_valid[30] + rob_valid[31]);
-
 always @(*)begin
     num_incoming = valid_in[0] + valid_in[1] + valid_in[2] + valid_in[3];
     free_slots = ROB_DEPTH - rob_count;
-    rob_full = (rob_count >= ROB_DEPTH - 4); // Leave margin for 4-wide dispatch
+    rob_full = (rob_count == ROB_DEPTH);
     rob_almost_full = (num_incoming > free_slots);
 end
 
@@ -130,7 +120,7 @@ always @(posedge clk or negedge rst)begin
         end
         rob_head         <= 5'd0;
         rob_tail         <= 5'd0;
-        // rob_count is now a wire
+        rob_count        <= 6'd0;
         commit_valid     <= 4'b0000;
         commit_rd_0      <= 5'd0;
         commit_rd_1      <= 5'd0;
@@ -150,55 +140,34 @@ always @(posedge clk or negedge rst)begin
         rat_restore_valid <= 0;
         rat_restore_rd    <= 0;
         rat_restore_prd   <= 0;
-        rat_restore_new_prd <= 0;
     end 
 
-    // FLUSH: sequential walkback to restore RAT state
-    else if(flush || squashing) begin
-        if(flush && !squashing) begin
-            squashing <= 1'b1;
-            rat_restore_valid <= 1'b0;
-        end 
-        else if(squashing) begin
-            // 1. Commit the branch (head) while squashing
-            if(ready_0) begin
-                if(rob_has_dest[rob_head] && rob_old_prd[rob_head] >= 7'd32) begin
-                    rob_free_valid[0] <= 1'b1;
-                    rob_free_preg_0  <= rob_old_prd[rob_head];
-                end
-                rob_valid[rob_head] <= 1'b0;
-                rob_head <= (rob_head + 1) % ROB_DEPTH;
-            end
+    // FLUSH: instant invalidation, NO multi-cycle walk
+    // RAT restore and free-list recovery handled externally via checkpoints
+    else if(flush)begin
+        for(i = 0; i < ROB_DEPTH; i = i + 1)
+            rob_valid[i] <= 1'b0;
 
-            // 2. Squash exit logic: Stop ONLY when we've walked all the way back to the head
-            if(rob_tail == rob_head) begin
-                squashing <= 1'b0;
-                rat_restore_valid <= 1'b0;
-                rat_restore_new_prd <= 7'd0;
-            end 
-            else begin
-                // Restore logic for tail-1
-                if(rob_has_dest[rob_tail == 0 ? 31 : rob_tail - 1] && (rob_rd[rob_tail == 0 ? 31 : rob_tail - 1] != 5'd0)) begin
-                    rat_restore_valid   <= 1'b1;
-                    rat_restore_rd      <= rob_rd[rob_tail == 0 ? 31 : rob_tail - 1];
-                    rat_restore_prd     <= rob_old_prd[rob_tail == 0 ? 31 : rob_tail - 1];
-                    rat_restore_new_prd <= rob_prd[rob_tail == 0 ? 31 : rob_tail - 1];
-                end 
-                else begin
-                    rat_restore_valid <= 1'b0;
-                    rat_restore_new_prd <= 7'd0;
-                end
-                
-                rob_valid[rob_tail == 0 ? 31 : rob_tail - 1] <= 1'b0;
-                rob_tail <= (rob_tail == 0 ? 31 : rob_tail - 1); // RETRACT THE TAIL
-            end
-        end
-
-        // During squash/flush, we allow the HEAD instruction to commit normally
-        // to resolve the deadlock between BPU and ROB head.
-        // We do not reset commit_valid and rob_free_valid here; they are calculated below.
+        rob_count        <= 6'd0;
+        rob_tail         <= rob_head;
+        commit_valid     <= 4'd0;
+        commit_rd_0      <= 5'd0;
+        commit_rd_1      <= 5'd0;
+        commit_rd_2      <= 5'd0;
+        commit_rd_3      <= 5'd0;
+        commit_prd_0     <= 7'd0;
+        commit_prd_1     <= 7'd0;
+        commit_prd_2     <= 7'd0;
+        commit_prd_3     <= 7'd0;
+        rob_free_valid   <= 4'd0;
+        rob_free_preg_0  <= 7'd0;
+        rob_free_preg_1  <= 7'd0;
+        rob_free_preg_2  <= 7'd0;
+        rob_free_preg_3  <= 7'd0;
+        rob_store_commit <= 0;
+        squashing        <= 0;  // NO squash walk needed
+        rat_restore_valid <= 0;
     end
-
 
     else begin
 
@@ -333,15 +302,13 @@ always @(posedge clk or negedge rst)begin
                 rob_done [(rob_tail+3) % ROB_DEPTH]      <= (!has_dest_in[3]);
                 rob_valid [(rob_tail+3) % ROB_DEPTH]     <= 1'b1;
             end
+
+            rob_tail <= (rob_tail + num_incoming) % ROB_DEPTH;
         end 
 
-        // Pointer and State Management
-        if(squashing && rob_count > 1) begin
-            rob_tail  <= (rob_tail == 0 ? 31 : rob_tail - 1);
-        end
-        else if(!squashing && !stall && !rob_full) begin
-            rob_tail  <= (rob_tail + num_incoming) % ROB_DEPTH;
-        end
+        if(!stall && !rob_full) rob_count <= rob_count + num_incoming - num_commits;
+        else if(num_commits > 0) rob_count <= rob_count - num_commits;
+
     end
     
 end

@@ -80,8 +80,7 @@ output [3:0] valid,valid_out_iqueue,valid_out_D,valid_out_decode,rat_update_vali
 output [3:0] has_dest,is_branch,is_jump,is_jalr,is_load,is_store;
 output [3:0] has_dest_out,is_branch_out,is_jump_out,is_jalr_out,is_load_out,is_store_out;
 output [3:0] has_dest_IQ,is_branch_IQ,is_jump_IQ,is_jalr_IQ,is_load_IQ,is_store_IQ;
-output [3:0] valid_IQ;
-output [3:0] cdb_valid;
+output [3:0] valid_IQ,cdb_valid;
 output [3:0] issue_has_dest,issue_is_branch,issue_is_jump,issue_is_jalr,issue_valid;
 output [2:0] func3_0,func3_1,func3_2,func3_3,func3_out_0,func3_out_1,func3_out_2,func3_out_3;
 output [2:0] func3_0_IQ,func3_1_IQ,func3_2_IQ,func3_3_IQ;
@@ -119,7 +118,6 @@ output wb_is_branch_0, wb_is_branch_1, wb_is_branch_2,wb_is_branch_3,alu3_stalle
 
 output lsq_store_ready;
 output mispredicted, flush;
-wire master_flush = flush | squashing;
 output is_branch_out_0,is_branch_out_1,is_branch_out_2,is_branch_out_3;
 
 wire push,pop;
@@ -129,7 +127,6 @@ wire squashing;
 wire rat_restore_valid;
 wire [4:0] rat_restore_rd;
 wire [6:0] rat_restore_prd;
-wire [6:0] rat_restore_new_prd;
 
 wire [31:0] correct_pc;
 wire [31:0] pc_fetch_0,pc_fetch_1,pc_fetch_2,pc_fetch_3; 
@@ -140,15 +137,13 @@ wire [31:0] wb_pc_0,wb_pc_1,wb_pc_2,wb_pc_3;
 wire [31:0] pc_ifid_0,pc_ifid_1,pc_ifid_2,pc_ifid_3; 
 wire [31:0] pc_dec_0,pc_dec_1,pc_dec_2,pc_dec_3; 
 wire [31:0] pc_ren_0,   pc_ren_1,   pc_ren_2,   pc_ren_3;
-wire issue_is_mul_3;
 
 PC a(.clk(clk),
      .rst(rst),
      .next(next),
      .flush(flush),
      .correct_pc(correct_pc),
-     .pc(pc),
-     .hold(squashing));
+     .pc(pc));
      
 Instruction_Mem b(.rst(rst),
                   .pc(pc),
@@ -449,9 +444,7 @@ Free_List h(.clk(clk),
             .rob_free_preg_0(rob_free_preg_0),
             .rob_free_preg_1(rob_free_preg_1),
             .rob_free_preg_2(rob_free_preg_2),
-            .rob_free_preg_3(rob_free_preg_3),
-            .squash_free_valid(rat_restore_valid),
-            .squash_free_preg(rat_restore_new_prd));
+            .rob_free_preg_3(rob_free_preg_3));
             
 RE_IQ i(.clk(clk),
        .rst(rst),
@@ -594,7 +587,7 @@ IssueQueue j(.clk(clk),
               .is_store_in(is_store_IQ),  
               .valid_in(valid_IQ),
               .prf_ready(prf_ready),
-              .cdb_valid(cdb_valid[3:0]),
+              .cdb_valid(cdb_valid),
               .cdb_tag_0(cdb_tag_0), 
               .cdb_tag_1(cdb_tag_1), 
               .cdb_tag_2(cdb_tag_2), 
@@ -636,7 +629,6 @@ IssueQueue j(.clk(clk),
               .issue_is_jump(issue_is_jump),
               .issue_is_jalr(issue_is_jalr),
               .issue_valid(issue_valid),
-              .issue_is_mul_3(issue_is_mul_3),
               .queue_full(queue_full),
               .queue_almost_full(queue_almost_full),
               .flush(flush),
@@ -672,7 +664,7 @@ PRF k(.clk(clk),
       .alloc_prd_1(alloc_preg_1), 
       .alloc_prd_2(alloc_preg_2), 
       .alloc_prd_3(alloc_preg_3),
-      .cdb_valid(cdb_valid[3:0]),
+      .cdb_valid(cdb_valid),
       .cdb_tag_0(cdb_tag_0),  
       .cdb_tag_1(cdb_tag_1),  
       .cdb_tag_2(cdb_tag_2),  
@@ -761,7 +753,7 @@ ROB m(.clk(clk),
       .is_store_in(is_store_IQ),
       .valid_in(valid_IQ),
       .stall(stall),               
-      .cdb_valid(cdb_valid[3:0]),
+      .cdb_valid(cdb_valid),
       .cdb_tag_0(cdb_tag_0), 
       .cdb_tag_1(cdb_tag_1), 
       .cdb_tag_2(cdb_tag_2), 
@@ -788,8 +780,7 @@ ROB m(.clk(clk),
       .squashing(squashing),
       .rat_restore_valid(rat_restore_valid),
       .rat_restore_rd(rat_restore_rd),
-      .rat_restore_prd(rat_restore_prd),
-      .rat_restore_new_prd(rat_restore_new_prd));
+      .rat_restore_prd(rat_restore_prd));
 
 LSQ n(.clk(clk),
       .rst(rst),
@@ -833,7 +824,7 @@ LSQ n(.clk(clk),
       .prs2_rd_data_1(lsq_data_prs2_1),
       .prs2_rd_data_2(lsq_data_prs2_2),
       .prs2_rd_data_3(lsq_data_prs2_3),
-      .cdb_valid(cdb_valid[3:0]),
+      .cdb_valid(cdb_valid),
       .cdb_tag_0(cdb_tag_0),
       .cdb_tag_1(cdb_tag_1),
       .cdb_tag_2(cdb_tag_2),
@@ -943,9 +934,7 @@ IQ_EX p(.clk(clk),
         .ex_pc_0(ex_pc_0),       
         .ex_pc_1(ex_pc_1),       
         .ex_pc_2(ex_pc_2),       
-        .ex_pc_3(ex_pc_3),
-        .issue_is_mul_3(issue_is_mul_3),
-        .ex_is_mul_3(ex_is_mul_3));
+        .ex_pc_3(ex_pc_3));
 
 // 3 ALU instances
 ALU q1(.opcode(ex_opcode_0), 
@@ -1008,14 +997,6 @@ ALU q3(.opcode(ex_opcode_2),
       .is_branch_out(is_branch_out_2),
       .pc_in(ex_pc_2));
       
-// CDB and Multiplier Unit signals
-wire mul_unit_valid;
-wire [6:0] mul_unit_tag;
-wire [31:0] mul_unit_result;
-wire mul_stalled;
-wire ex_is_mul_3;
-wire wb_is_mul_3;
-
 // Add in TOP:
 ALU q4(.opcode(ex_opcode_3),
        .func3(ex_func3_3),
@@ -1058,8 +1039,6 @@ EX_WB r(.clk(clk),
         .alu_valid_1(alu_valid_1),
         .alu_valid_2(alu_valid_2),
         .alu_valid_3(alu_valid_3),
-        .alu_is_mul_3(ex_is_mul_3),
-        .wb_is_mul_3(wb_is_mul_3),
         .alu_branch_taken_0(alu_branch_taken_0),
         .alu_branch_taken_1(alu_branch_taken_1),
         .alu_branch_taken_2(alu_branch_taken_2),
@@ -1101,22 +1080,7 @@ EX_WB r(.clk(clk),
         .wb_pc_1(wb_pc_1),  
         .wb_pc_2(wb_pc_2),  
         .wb_pc_3(wb_pc_3));
-
-MUL_Unit mu(
-    .clk(clk),
-    .rst(rst),
-    .flush(flush),
-    .hold(mul_stalled),
-    .src1(ex_src1_data_3),
-    .src2(ex_src2_data_3),
-    .func3(ex_func3_3),
-    .prd_in(ex_prd_3),
-    .valid_in(ex_valid[3] && ex_is_mul_3),
-    .prd_out(mul_unit_tag),
-    .result(mul_unit_result),
-    .valid_out(mul_unit_valid)
-);
-
+// CDB
 CDB s(.wb_valid_0(wb_valid_0),
       .wb_valid_1(wb_valid_1),
       .wb_valid_2(wb_valid_2),
@@ -1136,7 +1100,7 @@ CDB s(.wb_valid_0(wb_valid_0),
       .lsq_cdb_valid(lsq_cdb_valid),
       .lsq_cdb_tag(lsq_cdb_tag),
       .lsq_cdb_data(lsq_cdb_data),
-      .cdb_valid(cdb_valid[3:0]),
+      .cdb_valid(cdb_valid),
       .cdb_tag_0(cdb_tag_0),
       .cdb_tag_1(cdb_tag_1),
       .cdb_tag_2(cdb_tag_2),
@@ -1145,12 +1109,7 @@ CDB s(.wb_valid_0(wb_valid_0),
       .cdb_data_1(cdb_data_1),
       .cdb_data_2(cdb_data_2),
       .cdb_data_3(cdb_data_3),
-      .wb_is_mul_3(wb_is_mul_3),
-      .alu3_stalled(alu3_stalled),
-      .mul_valid(mul_unit_valid),
-      .mul_tag(mul_unit_tag),
-      .mul_data(mul_unit_result),
-      .mul_stalled(mul_stalled));
+      .alu3_stalled(alu3_stalled));
 // BPU
 BPU t(.clk(clk),
       .rst(rst),

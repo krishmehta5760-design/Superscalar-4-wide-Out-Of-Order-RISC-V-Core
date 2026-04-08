@@ -15,11 +15,7 @@ module IQ_EX(clk,rst,
              ex_has_dest,ex_is_branch,ex_is_jump,ex_is_jalr,ex_valid,
              ex_src1_data_0,ex_src1_data_1,ex_src1_data_2,ex_src1_data_3,
              ex_src2_data_0,ex_src2_data_1,ex_src2_data_2,ex_src2_data_3,flush,
-             issue_pc_0, issue_pc_1, issue_pc_2, issue_pc_3,ex_pc_0, ex_pc_1, ex_pc_2, ex_pc_3,
-             issue_is_mul_3, ex_is_mul_3);
-
-input issue_is_mul_3;
-output reg ex_is_mul_3;
+             issue_pc_0, issue_pc_1, issue_pc_2, issue_pc_3,ex_pc_0, ex_pc_1, ex_pc_2, ex_pc_3);
 
 input clk,rst;
 input [6:0] issue_prd_0,issue_prd_1,issue_prd_2,issue_prd_3;
@@ -55,7 +51,6 @@ if(!rst || flush)begin
 {ex_src1_data_0,ex_src1_data_1,ex_src1_data_2,ex_src1_data_3} <= 128'd0;
 {ex_src2_data_0,ex_src2_data_1,ex_src2_data_2,ex_src2_data_3} <= 128'd0;
 {ex_pc_0,ex_pc_1,ex_pc_2,ex_pc_3} <= 128'd0;
-ex_is_mul_3 <= 1'b0;
 end
 
 else begin
@@ -96,7 +91,6 @@ ex_pc_0 <= issue_pc_0;
 ex_pc_1 <= issue_pc_1;
 ex_pc_2 <= issue_pc_2;
 ex_pc_3 <= issue_pc_3;
-ex_is_mul_3 <= issue_is_mul_3;
 end
 
 end

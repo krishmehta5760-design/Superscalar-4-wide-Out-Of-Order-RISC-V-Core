@@ -87,7 +87,7 @@ assign fl_alloc_req[3] = valid_in[3] && has_dest[3] && (rd_3 != 5'd0) && !stall;
 always@(*)begin
 
 stall = fl_stall || iq_queue_full || rob_almost_full_in || lsq_full || squashing;
-rat_update_valid = (stall || squashing) ? 4'd0 : fl_alloc_req;
+rat_update_valid = stall ? 4'd0 : fl_alloc_req;
 
 end
 
@@ -109,7 +109,7 @@ valid_out <= 4'd0;
 
 end
 
-else if(!stall && !squashing) begin
+else if(!stall) begin
 
 prs1_0 <= rat_prs1_0;
 prs1_1 <= rat_prs1_1;

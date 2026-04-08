@@ -1175,4 +1175,12 @@ BPU t(.clk(clk),
       .wb_pc_3(wb_pc_3),
       .correct_pc(correct_pc));
       
+
+// Waveform generation for GTKWave
+initial begin
+    $dumpfile("processor_waves.vcd");
+    $dumpvars(0, TOP);
+end
+
 endmodule
+

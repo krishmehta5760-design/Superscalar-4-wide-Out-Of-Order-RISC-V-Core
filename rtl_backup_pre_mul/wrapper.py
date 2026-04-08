@@ -10,20 +10,18 @@ class OoOCoreWrapper:
     """
     def __init__(self, workspace_dir="."):
         self.workspace_dir = os.path.abspath(workspace_dir)
-        self.verilog_src_dir = r"C:\Users\KRISH MEHTA\OoO_rv.srcs\sources_1\new"
+        self.verilog_src_dir = os.path.join(self.workspace_dir, "rtl")
         
     def _copy_rtl(self):
-        """
-        In this scratch project, the RTL is already locally modified in the /rtl folder.
-        We skip copying from the main project to avoid overwriting our new 3-stage MUL and 4-CDB logic.
-        """
-        # rtl_dst = os.path.join(self.workspace_dir, "rtl")
-        # os.makedirs(rtl_dst, exist_ok=True)
-        # import glob
-        # for f in glob.glob(os.path.join(self.verilog_src_dir, "*.v")):
-        #     if os.path.getsize(f) > 0:
-        #         shutil.copy(f, rtl_dst)
-        pass
+        """Copy Verilog sources locally to avoid Makefile space-in-path issues."""
+        rtl_dst = os.path.join(self.workspace_dir, "rtl")
+        os.makedirs(rtl_dst, exist_ok=True)
+        import glob
+        for f in glob.glob(os.path.join(self.verilog_src_dir, "*.v")):
+            if os.path.getsize(f) > 0:
+                dst_file = os.path.join(rtl_dst, os.path.basename(f))
+                if os.path.abspath(f) != os.path.abspath(dst_file):
+                    shutil.copy(f, rtl_dst)
 
     def _write_program_mem(self, instructions: list[int]):
         """
@@ -65,22 +63,23 @@ class OoOCoreWrapper:
         env = os.environ.copy()
         env["SIM_CYCLES"] = str(cycles)
         
-        # Determine if we need to use WSL or run directly (if already in WSL/Linux)
-        is_windows = os.name == 'nt'
-        
-        if is_windows:
-            cmd = ["wsl", "bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; SIM_CYCLES={cycles} make"]
-        else:
-            cmd = ["bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; SIM_CYCLES={cycles} make"]
-
         # Execute the Makefile
         print(f"[Wrapper] Starting simulation for {cycles} cycles...")
+        
+        if sys.platform == "win32":
+            # Running on Windows, use WSL bridge
+            cmd = ["wsl", "bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; SIM_CYCLES={cycles} make"]
+        else:
+            # Running directly in Linux/Ubuntu
+            cmd = ["make"]
+
         process = subprocess.run(
             cmd,
             cwd=self.workspace_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
+            env=env
         )
         
         if process.returncode != 0:

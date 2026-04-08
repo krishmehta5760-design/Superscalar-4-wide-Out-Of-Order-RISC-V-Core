@@ -1,4 +1,4 @@
-module Free_List(clk,rst,alloc_req,alloc_preg_0,alloc_preg_1,alloc_preg_2,alloc_preg_3,stall,rob_free_valid,rob_free_preg_0,rob_free_preg_1,rob_free_preg_2,rob_free_preg_3,squash_free_valid,squash_free_preg);
+module Free_List(clk,rst,alloc_req,alloc_preg_0,alloc_preg_1,alloc_preg_2,alloc_preg_3,stall,rob_free_valid,rob_free_preg_0,rob_free_preg_1,rob_free_preg_2,rob_free_preg_3);
 
 input clk,rst;
 
@@ -16,9 +16,6 @@ input [6:0] rob_free_preg_1;
 input [6:0] rob_free_preg_2;
 input [6:0] rob_free_preg_3;
 
-input squash_free_valid;
-input [6:0] squash_free_preg;
-
 reg [6:0] free_list [0:95];
 reg [6:0] fl_head;
 reg [6:0] fl_tail;
@@ -33,9 +30,8 @@ wire is_free_0 = rob_free_valid[0] && (rob_free_preg_0 >= 32);
 wire is_free_1 = rob_free_valid[1] && (rob_free_preg_1 >= 32);
 wire is_free_2 = rob_free_valid[2] && (rob_free_preg_2 >= 32);
 wire is_free_3 = rob_free_valid[3] && (rob_free_preg_3 >= 32);
-wire is_squash_free = squash_free_valid && (squash_free_preg >= 32);
 
-assign total_free = is_free_0 + is_free_1 + is_free_2 + is_free_3 + is_squash_free;
+assign total_free = is_free_0 + is_free_1 + is_free_2 + is_free_3;
 
 integer i;
 integer offset;
@@ -96,7 +92,6 @@ if(is_free_0) free_list[fl_tail] <= rob_free_preg_0;
 if(is_free_1) free_list[(fl_tail + is_free_0) % 96] <= rob_free_preg_1;
 if(is_free_2) free_list[(fl_tail + is_free_0 + is_free_1) % 96] <= rob_free_preg_2;
 if(is_free_3) free_list[(fl_tail + is_free_0 + is_free_1 + is_free_2) % 96] <= rob_free_preg_3;
-if(is_squash_free) free_list[(fl_tail + is_free_0 + is_free_1 + is_free_2 + is_free_3) % 96] <= squash_free_preg;
 
 end
 

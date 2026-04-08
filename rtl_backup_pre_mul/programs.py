@@ -175,7 +175,7 @@ PROGRAMS = {
             0x06300213,  # addi x4, x0, 99     Done marker
         ],
         "expected": {1: 0, 2: 6, 3: 1, 4: 99},
-        "cycles": 200,
+        "cycles": 120,
         "expo_notes": [
             "This test deliberately breaks the Out-of-Order datapath!",
             "Because branches are evaluated out-of-order, a misprediction requires a massive Pipeline Squash.",
@@ -252,38 +252,6 @@ PROGRAMS = {
             "This test has literally zero structural or data dependencies.",
             "Because the pipeline is 4-wide fetch, it gobbles all 8 of these up in 2 clock cycles.",
             "The IPC recorded here is the absolute peak theoretical maximum your ROB's current commit architecture can support."
-        ],
-    },
-    # --------------------------------------------------------- Pipelined Multiplier
-    "mul_test": {
-        "name": "High-Performance Multiplier Unit",
-        "description": (
-            "Stress tests the high-performance 3-stage pipelined Multiplier. "
-            "It exercises complex 64-bit signed and unsigned operations "
-            "(MUL, MULH, MULHU) at full throughput, demonstrating the "
-            "core's ability to maintain high IPC even during heavy math."
-        ),
-        "instructions": _PAD + [
-            0x00A00093,  # addi x1, x0, 10      (src1 = 10)
-            0x01400113,  # addi x2, x0, 20      (src2 = 20)
-            0x022081B3,  # mul  x3, x1, x2      (x3 = 10 * 20 = 200)
-            0xFFF00213,  # addi x4, x0, -1      (x4 = -1, or 0xFFFFFFFF)
-            0x00200293,  # addi x5, x0, 2       (x5 = 2)
-            0x02521333,  # mulh x6, x4, x5      (x6 = -1 * 2 = -2; upper 32 bits is -1)
-            0x025233B3,  # mulhu x7, x4, x5     (x7 = (2^32-1)*2; upper 32 bits is 1)
-            0x06300413,  # addi x8, x0, 99      (Done marker)
-        ],
-        "expected": {
-            1: 10, 2: 20, 3: 200, 
-            4: 0xFFFFFFFF, 5: 2, 6: 0xFFFFFFFF, 
-            7: 1, 8: 99
-        },
-        "cycles": 100,
-        "expo_notes": [
-            "Features a brand new 3-stage pipelined design for maximum throughput",
-            "Functional verification of MUL (lower 32b) and complex MULH/MULHU (upper 32b)",
-            "Achieves near-perfect parallelism by sharing the CDB path without stalls",
-            "Critical for DSP and cryptographic workloads in high-end RISC-V cores",
         ],
     },
 }

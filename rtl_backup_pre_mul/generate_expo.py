@@ -2,16 +2,12 @@ from wrapper import OoOCoreWrapper
 from programs import PROGRAMS
 import os
 import json
-from golden_model_test import build_program, RV32GoldenModel
 
 def build_card(name, details, ipc, max_ipc, stalls, verification_pass):
     # Calculate percentages for the CSS width animations
     ipc_pct = min((ipc / max_ipc) * 100, 100) if max_ipc > 0 else 0
     stall_pct = min((stalls / 50) * 100, 100) 
     
-    # Extract flushes if present in details/results
-    flushes = details.get("flushes", 0)
-    flush_html = f'<span class="metric-pill" style="border-color: #ff758c; color: #ff758c;">Flushes: {flushes}</span>' if flushes > 0 else ""    
     notes_html = "<ul>"
     for note in details.get("expo_notes", []):
         notes_html += f"<li>{note}</li>"
@@ -26,7 +22,6 @@ def build_card(name, details, ipc, max_ipc, stalls, verification_pass):
             <span class="test-name">{name}</span>
             <div>
                 <span class="metric-pill veri-{veri_class}">{veri_text}</span>
-                {flush_html}
                 <span class="metric-pill">IPC: {ipc:.3f}</span>
             </div>
         </div>
@@ -72,36 +67,8 @@ def generate_dashboard():
     
     cards_html = ""
     
-    # Priority order for the showcase to highlight OoO features
-    priority_order = ["waw_test", "war_test", "mul_test", "independent_math", "raw_chain", "fibonacci", "alu_test", "load_store_test", "branch_test", "jump_test"]
-    
-    # Filter and sort programs
-    filtered_programs = {}
-    for key in priority_order:
-        if key in PROGRAMS:
-            filtered_programs[key] = PROGRAMS[key]
-    
-    # Add any remaining ones that aren't in priority
-    for key, val in PROGRAMS.items():
-        if key not in filtered_programs:
-            filtered_programs[key] = val
-            
-    # Add Golden Model dynamically
-    prog = build_program()
-    gm = RV32GoldenModel()
-    expected = gm.execute(prog, max_steps=1500)
-    filtered_programs["golden_model"] = {
-        "name": "Full RV32I+M Golden Model Validation (256 Insts)",
-        "instructions": prog,
-        "cycles": 1500,
-        "expected": expected,
-        "description": "Comprehensive validation mixing ALU, memory, branches, multiplier pipelines, and extreme hazard chains across a full 256-instruction sequence.",
-        "expo_notes": [
-            "Achieves high IPC even with massive back-to-back dependency chains.",
-            "Validates that Reorder Buffer and Issue Queue successfully avoid deadlock.",
-            "Demonstrates 5-bus CDB arbitration routing LSQ data perfectly natively alongside integer units."
-        ]
-    }
+    # Filter out branch mismatch test as per user request
+    filtered_programs = {k: v for k, v in PROGRAMS.items() if k != "branch_test"}
     
     for key, test_data in filtered_programs.items():
         print(f"[ExpoGen] Simulating: {test_data['name']}...")
@@ -110,11 +77,6 @@ def generate_dashboard():
             summary = res.get("summary", {})
             ipc = summary.get("ipc", 0)
             stalls = summary.get("stall_cycles", 0)
-            flushes = summary.get("total_flushes", 0)
-            
-            # Pass flushes into test_data for the build_card function
-            test_data["flushes"] = flushes
-            
             arch_regs = res.get("arch_regs", {})
             
             # Verify architectural state
@@ -142,7 +104,6 @@ def generate_dashboard():
         except Exception as e:
             print(f"[ERROR] Failed test {key}: {e}")
 
-    print(f"[DEBUG] Finished loop. total_tests = {total_tests}")
     # Read template
     with open("template.html", "r", encoding="utf-8") as f:
         template = f.read()
